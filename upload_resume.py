@@ -1,10 +1,8 @@
 """
-Naukri Resume Uploader
-- Renames your resume to shubham_kakhekar_DD-MM-YYYY.pdf
-- Uploads it to your Naukri profile
+Naukri Resume Uploader - Cookie based (no login needed)
 """
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import sync_playwright
 import os
 import shutil
 from datetime import datetime
@@ -12,10 +10,15 @@ import time
 import sys
 
 # ── Config ──────────────────────────────────────────────────
-EMAIL           = os.environ.get("NAUKRI_EMAIL", "your_email@example.com")
-PASSWORD        = os.environ.get("NAUKRI_PASSWORD", "your_password")
 ORIGINAL_RESUME = "Shubham_Kakhekar.pdf"
-HEADLESS        = True          # ← was `true` (JavaScript), Python needs capital T
+HEADLESS        = True
+
+NAUKRI_COOKIES = [
+    {"name": "nauk_at",  "value": os.environ.get("NAUK_AT",  "eyJraWQiOiIzIiwidHlwIjoiSldUIiwiYWxnIjoiUlM1MTIifQ.eyJkZXZpY2VUeXBlIjoibTBiNSIsInVkX3Jlc0lkIjoyNTAxNTA1NDAsInN1YiI6IjIzMTUwMDcwMiIsInVkX3VzZXJuYW1lIjoiZjE2NTYzOTA4Ny4xOTcxIiwidWRfaXNFbWFpbCI6dHJ1ZSwiaXNzIjoiSW5mb0VkZ2UgSW5kaWEgUHZ0LiBMdGQuIiwidXNlckFnZW50IjoiTW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzE0OC4wLjAuMCBTYWZhcmkvNTM3LjM2IiwiaXBBZHJlc3MiOiIxMDMuODEuMzYuOTgiLCJ1ZF9pc1RlY2hPcHNMb2dpbiI6ZmFsc2UsInVzZXJJZCI6MjMxNTAwNzAyLCJzdWJVc2VyVHlwZSI6IiIsInVzZXJTdGF0ZSI6IkFVVEhFTlRJQ0FURUQiLCJ1ZF9pc1BhaWRDbGllbnQiOmZhbHNlLCJ1ZF9lbWFpbFZlcmlmaWVkIjp0cnVlLCJ1c2VyVHlwZSI6ImpvYnNlZWtlciIsInNlc3Npb25TdGF0VGltZSI6IjIwMjYtMDUtMjRUMjE6NDM6MDQiLCJ1ZF9lbWFpbCI6Imtha2hla2Fyc2h1YmhhbUBnbWFpbC5jb20iLCJ1c2VyUm9sZSI6InVzZXIiLCJleHAiOjE3Nzk2NDc5MjMsInRva2VuVHlwZSI6ImFjY2Vzc1Rva2VuIiwiaWF0IjoxNzc5NjQ0MzIzLCJqdGkiOiIyNTU3MmI1NDViZDk0YmNiOThkNzNiZTZlODQ1NDhjZiIsInBvZElkIjoicHJvZC04NWRiNjlmZDQ4LXFwdDVtIn0.dSf4eTFWPkfyI1lZ2f8i0vJDq7wi1L-7HHfFuRd9VG2uChlVYP9vWwt0tLeErMK38otYYZOQnubU60XZGX9VFVFS9Xk1Ptt146kVRfIZKkwKI83vulGIWKO6-lwgZg3YhXXsFoEAt71ugWjq75JH5F1ChWFa1bi1rJLmeM27wpEuBZTvhxUn6wOepJs_NJGYmXIkNLPew4w6YqHfl4okC7adq1n4KkExrhjax4lqhqoA3L8B8BzyVkyWQp3NhSsTxxNHjkK8FcrWq__NJT6uk48Z47_gau8s7j2iASwB5Q_buXSZiREunUwFEmsZPzIWWaqIkmoOrzwAmybPxv5BfQ"), "domain": ".naukri.com", "path": "/"},
+    {"name": "nauk_sid", "value": os.environ.get("NAUK_SID", "25572b545bd94bcb98d73be6e84548cf"), "domain": ".naukri.com", "path": "/"},
+    {"name": "nauk_rt",  "value": os.environ.get("NAUK_RT",  "25572b545bd94bcb98d73be6e84548cf"), "domain": ".naukri.com", "path": "/"},
+    {"name": "is_login", "value": "1", "domain": ".naukri.com", "path": "/"},
+]
 # ────────────────────────────────────────────────────────────
 
 
@@ -38,33 +41,15 @@ def rename_resume(original_path):
     return new_path
 
 
-def login(page):
-    log("Opening Naukri login page...")
-    page.goto("https://www.naukri.com/nlogin/login", wait_until="domcontentloaded")
-    time.sleep(3)
-
-    log("Logging in...")
-    page.fill("input[type='text']", EMAIL)
-    page.fill("input[type='password']", PASSWORD)
-    page.click("button[type='submit']")
-    time.sleep(5)
-
-    if "nlogin" in page.url or "login" in page.url:
-        log("ERROR: Login failed. Check your credentials.")
-        page.screenshot(path="debug_screenshot.png")
-        sys.exit(1)
-
-    log("Login successful!")
-
-
 def upload_resume(page, resume_path):
     log("Going to profile page...")
     page.goto("https://www.naukri.com/mnjuser/profile", wait_until="domcontentloaded")
     time.sleep(3)
 
-    log("Looking for resume upload input...")
+    page.screenshot(path="profile_page.png")
+    log("Screenshot saved → profile_page.png")
 
-    # Try clicking the Update Resume / upload button first
+    log("Looking for resume upload input...")
     upload_btn_selectors = [
         "text=Update Resume",
         "text=Upload Resume",
@@ -84,7 +69,6 @@ def upload_resume(page, resume_path):
         except Exception:
             continue
 
-    # Set the file on the file input directly
     file_input_selectors = [
         "input#attachCV",
         "input[type='file'][name='attachCV']",
@@ -109,14 +93,13 @@ def upload_resume(page, resume_path):
 
     time.sleep(3)
 
-    # Confirm/Save if dialog appears
     try:
         page.locator("button:has-text('Save')").first.click(timeout=4000)
         time.sleep(2)
     except Exception:
-        pass  # some flows auto-save after file selection
+        pass
 
-    log(f"Resume uploaded: {os.path.basename(resume_path)}")
+    log(f"✅ Resume uploaded: {os.path.basename(resume_path)}")
 
 
 def run():
@@ -124,19 +107,34 @@ def run():
 
     with sync_playwright() as p:
         log("Launching browser...")
-        browser = p.chromium.launch(headless=HEADLESS)
+        browser = p.chromium.launch(
+            headless=HEADLESS,
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-blink-features=AutomationControlled",
+            ]
+        )
         context = browser.new_context(
             viewport={"width": 1366, "height": 768},
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            )
+                "Chrome/148.0.0.0 Safari/537.36"
+            ),
+            locale="en-IN",
+            timezone_id="Asia/Kolkata",
         )
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        """)
+
+        # Inject cookies before loading any page
+        context.add_cookies(NAUKRI_COOKIES)
+
         page = context.new_page()
 
         try:
-            login(page)
             upload_resume(page, resume_path)
         except Exception as e:
             log(f"Unexpected error: {e}")
