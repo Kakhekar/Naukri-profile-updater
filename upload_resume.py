@@ -29,7 +29,7 @@ def rename_resume(original_path):
         sys.exit(1)
 
     ext = os.path.splitext(original_path)[1]
-    today = datetime.today().strftime("%d-%m-%Y")
+    today = datetime.today().strftime("%d_%m_%Y")
     new_name = f"shubham_kakhekar_{today}{ext}"
     new_path = os.path.join(os.path.dirname(os.path.abspath(original_path)), new_name)
 
