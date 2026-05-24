@@ -39,25 +39,19 @@ def rename_resume(original_path):
 
 
 def login(page):
-    log("Opening Naukri...")
-    page.goto("https://www.naukri.com/", wait_until="domcontentloaded")
-    time.sleep(2)
-
-    try:
-        page.click("a[href*='login']", timeout=5000)
-    except PlaywrightTimeout:
-        page.goto("https://www.naukri.com/nlogin/login")
-
-    time.sleep(2)
+    log("Opening Naukri login page...")
+    page.goto("https://www.naukri.com/nlogin/login", wait_until="domcontentloaded")
+    time.sleep(3)
 
     log("Logging in...")
-    page.fill("input[placeholder='Enter your active Email ID / Username']", EMAIL)
-    page.fill("input[placeholder='Enter your password']", PASSWORD)
+    page.fill("input[type='text']", EMAIL)
+    page.fill("input[type='password']", PASSWORD)
     page.click("button[type='submit']")
-    time.sleep(4)
+    time.sleep(5)
 
     if "nlogin" in page.url or "login" in page.url:
         log("ERROR: Login failed. Check your credentials.")
+        page.screenshot(path="debug_screenshot.png")
         sys.exit(1)
 
     log("Login successful!")
