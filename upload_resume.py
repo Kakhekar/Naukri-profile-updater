@@ -1,6 +1,6 @@
 """
 Naukri Resume Uploader
-- Renames your resume to shubham_kakhekar_DDMMYYYY.pdf
+- Renames your resume to shubham_kakhekar_DD-MM-YYYY.pdf
 - Uploads it to your Naukri profile
 """
 
@@ -12,10 +12,10 @@ import time
 import sys
 
 # ── Config ──────────────────────────────────────────────────
-EMAIL           = "kakhekarshubham@gmail.com"
-PASSWORD        = "!*8_HQJL_L.Bekx"
-ORIGINAL_RESUME = "Shubham_Kakhekar.pdf"   # path to your resume file
-HEADLESS        = False          # set True to hide browser window
+EMAIL           = os.environ.get("NAUKRI_EMAIL", "your_email@example.com")
+PASSWORD        = os.environ.get("NAUKRI_PASSWORD", "your_password")
+ORIGINAL_RESUME = "Shubham_Kakhekar.pdf"
+HEADLESS        = True          # ← was `true` (JavaScript), Python needs capital T
 # ────────────────────────────────────────────────────────────
 
 

@@ -1,0 +1,28 @@
+name: Naukri Resume Upload
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # runs every day at 4AM UTC (9:30AM IST)
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright schedule
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run uploader
+        env:
+          NAUKRI_EMAIL: ${{ secrets.NAUKRI_EMAIL }}
+          NAUKRI_PASSWORD: ${{ secrets.NAUKRI_PASSWORD }}
+        run: python upload_resume.py
