@@ -107,31 +107,18 @@ def run():
 
     with sync_playwright() as p:
         log("Launching browser...")
-        browser = p.chromium.launch(
-            headless=HEADLESS,
-            args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-blink-features=AutomationControlled",
-            ]
-        )
+        browser = p.firefox.launch(headless=HEADLESS)
         context = browser.new_context(
             viewport={"width": 1366, "height": 768},
             user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/148.0.0.0 Safari/537.36"
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) "
+                "Gecko/20100101 Firefox/124.0"
             ),
             locale="en-IN",
             timezone_id="Asia/Kolkata",
         )
-        context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        """)
 
-        # Inject cookies before loading any page
         context.add_cookies(NAUKRI_COOKIES)
-
         page = context.new_page()
 
         try:
