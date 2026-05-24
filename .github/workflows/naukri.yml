@@ -38,3 +38,9 @@ jobs:
         with:
           name: screenshots
           path: "*.png"
+
+      - name: Install dependencies
+        run: |
+          pip install playwright python-dotenv
+          playwright install firefox
+          playwright install-deps firefox
