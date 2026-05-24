@@ -22,8 +22,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install playwright python-dotenv
-          playwright install chromium
-          playwright install-deps chromium
+          playwright install firefox
+          playwright install-deps firefox
 
       - name: Run uploader
         env:
@@ -38,9 +38,3 @@ jobs:
         with:
           name: screenshots
           path: "*.png"
-
-      - name: Install dependencies
-        run: |
-          pip install playwright python-dotenv
-          playwright install firefox
-          playwright install-deps firefox
