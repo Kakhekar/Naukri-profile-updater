@@ -2,8 +2,8 @@ name: Naukri Resume Upload
 
 on:
   schedule:
-    # - cron: '0 4 * * *'
-    - cron: '7 18 * * *'
+    - cron: '30 5 * * *'   # 11:00 AM IST
+    - cron: '0 13 * * *'   # 6:30 PM IST
   workflow_dispatch:
 
 env:
