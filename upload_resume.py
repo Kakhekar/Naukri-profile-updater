@@ -1,5 +1,8 @@
 """
 Naukri Resume Uploader - Cookie based (no login needed)
+
+This script is optional and is designed to use environment variables for all sensitive values.
+Never commit active session cookies or login credentials into source control.
 """
 
 from playwright.sync_api import sync_playwright
@@ -10,14 +13,34 @@ import time
 import sys
 
 # ── Config ──────────────────────────────────────────────────
-ORIGINAL_RESUME = "Shubham_Kakhekar.pdf"
-HEADLESS        = True
+ORIGINAL_RESUME = os.environ.get("NAUKRI_ORIGINAL_RESUME", "Shubham_Kakhekar.pdf")
+HEADLESS = os.environ.get("NAUKRI_HEADLESS", "True").strip().lower() in ("1", "true", "yes")
 
 NAUKRI_COOKIES = [
-    {"name": "nauk_at",  "value": os.environ.get("NAUK_AT",  "eyJraWQiOiIzIiwidHlwIjoiSldUIiwiYWxnIjoiUlM1MTIifQ.eyJkZXZpY2VUeXBlIjoibTBiNSIsInVkX3Jlc0lkIjoyNTAxNTA1NDAsInN1YiI6IjIzMTUwMDcwMiIsInVkX3VzZXJuYW1lIjoiZjE2NTYzOTA4Ny4xOTcxIiwidWRfaXNFbWFpbCI6dHJ1ZSwiaXNzIjoiSW5mb0VkZ2UgSW5kaWEgUHZ0LiBMdGQuIiwidXNlckFnZW50IjoiTW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzE0OC4wLjAuMCBTYWZhcmkvNTM3LjM2IiwiaXBBZHJlc3MiOiIxMDMuODEuMzYuOTgiLCJ1ZF9pc1RlY2hPcHNMb2dpbiI6ZmFsc2UsInVzZXJJZCI6MjMxNTAwNzAyLCJzdWJVc2VyVHlwZSI6IiIsInVzZXJTdGF0ZSI6IkFVVEhFTlRJQ0FURUQiLCJ1ZF9pc1BhaWRDbGllbnQiOmZhbHNlLCJ1ZF9lbWFpbFZlcmlmaWVkIjp0cnVlLCJ1c2VyVHlwZSI6ImpvYnNlZWtlciIsInNlc3Npb25TdGF0VGltZSI6IjIwMjYtMDUtMjRUMjE6NDM6MDQiLCJ1ZF9lbWFpbCI6Imtha2hla2Fyc2h1YmhhbUBnbWFpbC5jb20iLCJ1c2VyUm9sZSI6InVzZXIiLCJleHAiOjE3Nzk2NDc5MjMsInRva2VuVHlwZSI6ImFjY2Vzc1Rva2VuIiwiaWF0IjoxNzc5NjQ0MzIzLCJqdGkiOiIyNTU3MmI1NDViZDk0YmNiOThkNzNiZTZlODQ1NDhjZiIsInBvZElkIjoicHJvZC04NWRiNjlmZDQ4LXFwdDVtIn0.dSf4eTFWPkfyI1lZ2f8i0vJDq7wi1L-7HHfFuRd9VG2uChlVYP9vWwt0tLeErMK38otYYZOQnubU60XZGX9VFVFS9Xk1Ptt146kVRfIZKkwKI83vulGIWKO6-lwgZg3YhXXsFoEAt71ugWjq75JH5F1ChWFa1bi1rJLmeM27wpEuBZTvhxUn6wOepJs_NJGYmXIkNLPew4w6YqHfl4okC7adq1n4KkExrhjax4lqhqoA3L8B8BzyVkyWQp3NhSsTxxNHjkK8FcrWq__NJT6uk48Z47_gau8s7j2iASwB5Q_buXSZiREunUwFEmsZPzIWWaqIkmoOrzwAmybPxv5BfQ"), "domain": ".naukri.com", "path": "/"},
-    {"name": "nauk_sid", "value": os.environ.get("NAUK_SID", "25572b545bd94bcb98d73be6e84548cf"), "domain": ".naukri.com", "path": "/"},
-    {"name": "nauk_rt",  "value": os.environ.get("NAUK_RT",  "25572b545bd94bcb98d73be6e84548cf"), "domain": ".naukri.com", "path": "/"},
-    {"name": "is_login", "value": "1", "domain": ".naukri.com", "path": "/"},
+    {
+        "name": "nauk_at",
+        "value": os.environ.get("NAUK_AT", ""),
+        "domain": ".naukri.com",
+        "path": "/",
+    },
+    {
+        "name": "nauk_sid",
+        "value": os.environ.get("NAUK_SID", ""),
+        "domain": ".naukri.com",
+        "path": "/",
+    },
+    {
+        "name": "nauk_rt",
+        "value": os.environ.get("NAUK_RT", ""),
+        "domain": ".naukri.com",
+        "path": "/",
+    },
+    {
+        "name": "is_login",
+        "value": "1",
+        "domain": ".naukri.com",
+        "path": "/",
+    },
 ]
 # ────────────────────────────────────────────────────────────
 
@@ -45,9 +68,6 @@ def upload_resume(page, resume_path):
     log("Going to profile page...")
     page.goto("https://www.naukri.com/mnjuser/profile", wait_until="domcontentloaded")
     time.sleep(3)
-
-    page.screenshot(path="profile_page.png")
-    log("Screenshot saved → profile_page.png")
 
     log("Looking for resume upload input...")
     upload_btn_selectors = [
@@ -92,7 +112,6 @@ def upload_resume(page, resume_path):
         sys.exit(1)
 
     time.sleep(3)
-
     try:
         page.locator("button:has-text('Save')").first.click(timeout=4000)
         time.sleep(2)
@@ -103,6 +122,13 @@ def upload_resume(page, resume_path):
 
 
 def run():
+    missing = [cookie["name"] for cookie in NAUKRI_COOKIES if not cookie["value"] and cookie["name"] != "is_login"]
+    if missing:
+        raise ValueError(
+            f"Missing cookie values for: {', '.join(missing)}. "
+            "Set them through environment variables and do not commit secret values."
+        )
+
     resume_path = rename_resume(ORIGINAL_RESUME)
 
     with sync_playwright() as p:

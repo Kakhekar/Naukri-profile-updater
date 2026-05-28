@@ -1,20 +1,27 @@
 """
-Configuration — fill in your details here before running.
+Configuration — load credentials from environment variables whenever possible.
 """
 
-# Your Naukri login credentials
-EMAIL = "kakhekarshubham@gmail.com"
-PASSWORD = "!*8_HQJL_L.Bekx"
+import os
 
-# The headline to set on your profile
-# Change this periodically so it looks like a genuine update
-HEADLINE = "Software Engineer | Python | Django | 5 Years Experience"
+# Your Naukri login credentials.
+# For security, avoid committing real credentials to source control.
+EMAIL = os.environ.get("NAUKRI_EMAIL", "")
+PASSWORD = os.environ.get("NAUKRI_PASSWORD", "")
 
-# Set to True to run without opening a visible browser window
-# Set to False (recommended at first) so you can watch it work
-HEADLESS = False
+# The headline to set on your profile.
+HEADLINE = os.environ.get(
+    "NAUKRI_HEADLINE",
+    "Software Engineer | Python | Django | 5 Years Experience",
+)
 
-# ── Resume Upload ──────────────────────────────────────────
-# Path to your resume file (PDF or DOCX)
-# Can be relative (same folder) or absolute
-RESUME_PATH = "Shubham_kakhekar.pdf"
+# Run browser in headless mode by default when NAUKRI_HEADLESS is set to 1/true/yes.
+HEADLESS = os.environ.get("NAUKRI_HEADLESS", "False").strip().lower() in ("1", "true", "yes")
+
+# Optional resume path for upload scripts.
+RESUME_PATH = os.environ.get("NAUKRI_RESUME_PATH", "Shubham_Kakhekar.pdf")
+
+if not EMAIL or not PASSWORD:
+    raise ValueError(
+        "NAUKRI_EMAIL and NAUKRI_PASSWORD must be set in environment variables or config.py"
+    )

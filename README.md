@@ -18,15 +18,24 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-### 3. Edit `config.py`
+### 3. Configure credentials
 
-Open `config.py` and fill in:
+For safety, store your Naukri credentials in environment variables instead of committing them.
+
+```bash
+set NAUKRI_EMAIL=your_email@example.com
+set NAUKRI_PASSWORD=your_password
+set NAUKRI_HEADLINE="Your Updated Headline Here"
+set NAUKRI_HEADLESS=False
+```
+
+You can also edit `config.py` directly if needed, but avoid storing real passwords in version control.
 
 ```python
-EMAIL    = "your_email@example.com"
-PASSWORD = "your_password"
-HEADLINE = "Your Updated Headline Here"
-HEADLESS = False   # Change to True to run silently (no browser window)
+EMAIL = os.environ.get("NAUKRI_EMAIL", "")
+PASSWORD = os.environ.get("NAUKRI_PASSWORD", "")
+HEADLINE = os.environ.get("NAUKRI_HEADLINE", "Your Updated Headline Here")
+HEADLESS = os.environ.get("NAUKRI_HEADLESS", "False").lower() in ("1", "true", "yes")
 ```
 
 ---
