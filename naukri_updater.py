@@ -1,146 +1,295 @@
 """
-Naukri Profile Auto-Updater
-Logs into Naukri and updates your resume headline to keep your profile active.
+Naukri Headline + About Updater - Cookie based
 """
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
-import time
-import sys
-from config import EMAIL, PASSWORD, HEADLINE, HEADLESS
+from playwright.sync_api import sync_playwright
+from dotenv import load_dotenv
+from datetime import date
+import os, time, sys
+
+load_dotenv()
+
+# ── Config ───────────────────────────────────────────────────
+HEADLESS = os.environ.get("HEADLESS", "true").lower() == "true"
+
+NAUKRI_COOKIES = [
+    {"name": "nauk_at",  "value": os.environ.get("NAUK_AT",  ""), "domain": ".naukri.com", "path": "/"},
+    {"name": "nauk_sid", "value": os.environ.get("NAUK_SID", ""), "domain": ".naukri.com", "path": "/"},
+    {"name": "nauk_rt",  "value": os.environ.get("NAUK_RT",  ""), "domain": ".naukri.com", "path": "/"},
+    {"name": "is_login", "value": "1",                            "domain": ".naukri.com", "path": "/"},
+]
+
+
+def load_headlines():
+    raw = os.environ.get("NAUKRI_HEADLINES", "").strip()
+    if raw:
+        return [h.strip() for h in raw.split("||") if h.strip()]
+    return [
+        "Full Stack Dev | Angular | Java 17 | Spring Boot",
+        "TypeScript | REST APIs | Microservices | Agile",
+        "Java Developer | WebSockets | RxJS | CI/CD",
+        "Full Stack Engineer | Healthcare IT | Enterprise Apps",
+        "Angular + Java | Microservices | Real-time Features",
+        "Software Engineer | Spring Boot | Agile | Healthcare",
+        "Full Stack Dev | TypeScript | Java 17 | WebSockets",
+    ]
+
+
+def load_about():
+    raw = os.environ.get("NAUKRI_ABOUT", "").strip()
+    if raw:
+        return [a.strip() for a in raw.split("||") if a.strip()]
+    return [
+        "Full Stack Developer | 2+ yrs React.js, Node.js, REST APIs & CI/CD. 20-30% performance improvement. Agile, Docker, Kubernetes, PostgreSQL.",
+        "React.js & Node.js Developer | End-to-end ownership from design to production. PostgreSQL, Docker, Kubernetes. Agile & SAFe. 20-30% perf boost.",
+        "Full Stack Engineer | 2+ years building responsive frontends & scalable backends. React.js, Redux, Node.js, REST APIs, CI/CD, GitHub Copilot.",
+        "Results-driven Full Stack Developer | React.js, Node.js, PostgreSQL, Docker. 20-30% performance gains. End-to-end ownership in Agile/SAFe.",
+        "Frontend-leaning Full Stack Dev | React.js, Redux, JavaScript expert. Node.js & REST APIs backend. CI/CD, Docker, Kubernetes. Strong Agile skills.",
+        "Performance-focused Full Stack Dev | 2+ yrs React.js & Node.js. 20-30% app improvement. PostgreSQL, Docker, CI/CD, GitHub Copilot, Agile.",
+        "Full Stack Developer | React.js | Node.js | Docker | Kubernetes | 2+ years delivering scalable production-grade apps. Agile, REST APIs, CI/CD.",
+    ]
+
+
+HEADLINES = load_headlines()
+ABOUTS    = load_about()
+TODAY_IDX = date.today().weekday()
+HEADLINE  = HEADLINES[TODAY_IDX % len(HEADLINES)]
+ABOUT     = ABOUTS[TODAY_IDX % len(ABOUTS)]
+# ─────────────────────────────────────────────────────────────
 
 
 def log(msg):
     print(f"[naukri] {msg}")
 
 
-def login(page):
-    log("Opening Naukri...")
-    page.goto("https://www.naukri.com/", wait_until="domcontentloaded")
-    time.sleep(2)
-
-    try:
-        page.click("a[href*='login']", timeout=5000)
-    except PlaywrightTimeout:
-        page.goto("https://www.naukri.com/nlogin/login")
-
-    time.sleep(2)
-
-    log("Filling login form...")
-    page.fill("input[placeholder='Enter your active Email ID / Username']", EMAIL)
-    page.fill("input[placeholder='Enter your password']", PASSWORD)
-    page.click("button[type='submit']")
-    time.sleep(4)
-
-    if "nlogin" in page.url or "login" in page.url:
-        log("ERROR: Login failed. Check credentials in config.py")
-        sys.exit(1)
-
-    log("Login successful!")
-
-
-def update_headline(page):
+def go_to_profile(page):
     log("Going to profile page...")
     page.goto("https://www.naukri.com/mnjuser/profile", wait_until="domcontentloaded")
-    time.sleep(3)
+    time.sleep(2)  # reduced from 3
 
-    log("Looking for Resume Headline edit button...")
-    clicked = False
-    edit_selectors = [
-        "//div[contains(@class,'resumeHeadline')]//span[contains(@class,'edit')]",
-        "//div[contains(text(),'Resume Headline')]/..//span[contains(@class,'edit')]",
-        "div.resumeHeadline .editIcon",
-        "div.resumeHeadline .edit",
-        "div.widgetHead .edit",
-    ]
-    for sel in edit_selectors:
-        try:
-            if sel.startswith("//"):
-                page.locator(f"xpath={sel}").first.click(timeout=3000)
-            else:
-                page.locator(sel).first.click(timeout=3000)
-            clicked = True
-            log(f"Clicked edit with: {sel}")
-            break
-        except Exception:
-            continue
 
-    if not clicked:
-        try:
-            page.get_by_text("Resume Headline").locator("..").get_by_role("button").click(timeout=5000)
-            clicked = True
-        except Exception:
-            pass
+def fill_input(page, text, screenshot_name, selector_hint=None):
+    """Fill a specific textarea."""
+    input_el = None
 
-    if not clicked:
-        log("Could not find edit button. Saving debug_screenshot.png ...")
-        page.screenshot(path="debug_screenshot.png")
-        sys.exit(1)
+    selectors = []
+    if selector_hint:
+        selectors.append(selector_hint)
 
-    time.sleep(2)
-
-    log("Finding headline textarea...")
-    textarea = None
-    textarea_selectors = [
+    selectors += [
+        "textarea#profileSummary",
+        "textarea[name='profileSummary']",
+        "textarea[placeholder*='summary' i]",
+        "textarea[placeholder*='profile' i]",
         "textarea#resumeHeadline",
         "textarea[name='resumeHeadline']",
         "textarea[placeholder*='headline' i]",
-        "textarea[placeholder*='Headline']",
-        "div.resumeHeadline textarea",
+        "[contenteditable='true']",
         "textarea",
     ]
-    for sel in textarea_selectors:
+
+    for sel in selectors:
         try:
             loc = page.locator(sel).first
             loc.wait_for(state="visible", timeout=3000)
-            textarea = loc
-            log(f"Found textarea with: {sel}")
+            input_el = loc
+            log(f"Found input: {sel}")
             break
         except Exception:
             continue
 
-    if textarea is None:
-        log("Could not find textarea. Saving debug_screenshot.png ...")
-        page.screenshot(path="debug_screenshot.png")
+    if input_el is None:
+        log(f"Could not find input. Saving {screenshot_name}...")
+        page.screenshot(path=screenshot_name)
+        return False
+
+    input_el.click()
+    input_el.press("Control+a")
+    input_el.press("Delete")
+    time.sleep(0.5)
+    input_el.fill(text)   # ← fill() instead of type() — instant, no timeout
+    time.sleep(1)
+    return True
+
+def click_save(page, screenshot_name):
+    """Try multiple Save button selectors."""
+    for sel in [
+        "button:has-text('Save')",
+        ".modal button:has-text('Save')",
+        "div[role='dialog'] button:has-text('Save')",
+        "xpath=//button[normalize-space(text())='Save']",
+        "xpath=//div[contains(@class,'modal')]//button[contains(text(),'Save')]",
+        "button.saveBtn",
+        "button[type='submit']",
+    ]:
+        try:
+            page.locator(sel).first.click(timeout=3000)
+            time.sleep(2)
+            log(f"Clicked Save with: {sel}")
+            return True
+        except Exception:
+            continue
+
+    log(f"Could not click Save. Saving {screenshot_name}...")
+    page.screenshot(path=screenshot_name)
+    return False
+
+
+def close_success_popup(page):
+    for sel in [
+        ".profileUpdatedProLayer > div:nth-child(1) > span:nth-child(1)",
+        "button[aria-label='Close']",
+        "span[aria-label='Close']",
+        "[class*='crossIcon']",
+        "[class*='closeIcon']",
+        "[class*='closeBtn']",
+        "button:has-text('Close')",
+        "button:has-text('OK')",
+    ]:
+        try:
+            if sel.startswith("//"):
+                btn = page.locator(f"xpath={sel}").first
+            else:
+                btn = page.locator(sel).first
+            btn.wait_for(state="visible", timeout=1500)  # reduced from 3000
+            btn.click(timeout=1500)
+            log(f"Closed popup with: {sel}")
+            time.sleep(0.5)  # reduced from 1
+            return True
+        except Exception:
+            continue
+
+    try:
+        page.keyboard.press("Escape")
+        log("Closed popup with Escape")
+        time.sleep(0.5)
+        return True
+    except Exception:
+        pass
+
+    return False
+
+def update_headline(page):
+    log("Looking for Resume Headline edit button...")
+    for sel in [
+        "xpath=//div[contains(@class,'resumeHeadline')]//span[contains(@class,'edit')]",
+        "xpath=//div[contains(text(),'Resume Headline')]/..//span[contains(@class,'edit')]",
+        "div.resumeHeadline .editIcon",
+        "div.resumeHeadline .edit",
+    ]:
+        try:
+            page.locator(sel).first.click(timeout=3000)
+            log(f"Clicked headline edit: {sel}")
+            break
+        except Exception:
+            continue
+
+    time.sleep(2)
+
+    if not fill_input(page, HEADLINE, "debug_headline.png"):
         sys.exit(1)
 
-    log("Updating headline text...")
-    textarea.click()
-    textarea.fill("")
-    textarea.fill(HEADLINE)
+    if not click_save(page, "debug_headline.png"):
+        sys.exit(1)
+
+    log(f'✅ Headline updated: "{HEADLINE}"')
+
+    time.sleep(2)
+    closed = close_success_popup(page)
+    if closed:
+        log("Popup closed — moving to About update...")
+    else:
+        log("No popup found or already dismissed — continuing to About...")
     time.sleep(1)
 
-    log("Saving...")
+
+def update_about(page):
+    log("Looking for Profile Summary edit button...")
+
     try:
-        page.locator("button:has-text('Save')").first.click(timeout=5000)
+        page.evaluate("window.scrollBy(0, 600)")
+        time.sleep(0.5)  # reduced from 1
     except Exception:
+        pass
+
+    for sel in [
+        "xpath=//div[contains(@class,'profileSummary')]//span[contains(@class,'edit')]",
+        "xpath=//div[contains(@class,'profileSummary')]//span[contains(@class,'editIcon')]",
+        "xpath=//div[contains(text(),'Profile summary')]/..//span[contains(@class,'edit')]",
+        "xpath=//section[contains(@class,'profileSummary')]//span[contains(@class,'edit')]",
+        "xpath=//h2[contains(text(),'Profile summary')]/..//span[contains(@class,'edit')]",
+        "div.profileSummary .editIcon",
+        "div.profileSummary .edit",
+        "div.profileSummary span.edit",
+    ]:
         try:
-            page.locator("input[value='Save']").first.click(timeout=5000)
+            page.locator(sel).first.click(timeout=3000)
+            log(f"Clicked profile summary edit: {sel}")
+            break
         except Exception:
-            log("Could not find Save button. Saving debug_screenshot.png ...")
-            page.screenshot(path="debug_screenshot.png")
-            sys.exit(1)
+            continue
 
-    time.sleep(3)
-    log(f'Headline updated to: "{HEADLINE}"')
+    time.sleep(1)  # reduced from 2
 
+    input_el = None
+    for sel in [
+        "textarea#profileSummaryTxt",  # ← exact id from your error log
+        "textarea#profileSummary",
+        "textarea[name='profileSummary']",
+        "textarea[placeholder*='summary' i]",
+        "div.profileSummary textarea",
+        "textarea",
+    ]:
+        try:
+            loc = page.locator(sel).first
+            loc.wait_for(state="visible", timeout=3000)
+            input_el = loc
+            log(f"Found profile summary input: {sel}")
+            break
+        except Exception:
+            continue
 
+    if input_el is None:
+        log("Could not find Profile Summary textarea. Skipping...")
+        page.screenshot(path="debug_about.png")
+        return
+
+    input_el.click()
+    input_el.fill("")    # clear instantly
+    input_el.fill(ABOUT) # fill instantly
+    time.sleep(0.5)
+
+    if not click_save(page, "debug_about.png"):
+        log("Skipping profile summary save...")
+        return
+
+    time.sleep(1)  # reduced from 2
+    close_success_popup(page)
+
+    log(f'✅ Profile Summary updated: "{ABOUT[:60]}..."')
+        
 def run():
+    missing = [c["name"] for c in NAUKRI_COOKIES if not c["value"] and c["name"] != "is_login"]
+    if missing:
+        log(f"ERROR: Missing cookies: {', '.join(missing)}")
+        sys.exit(1)
+
     with sync_playwright() as p:
         log("Launching browser...")
-        browser = p.chromium.launch(headless=HEADLESS)
+        browser = p.firefox.launch(headless=HEADLESS)
         context = browser.new_context(
             viewport={"width": 1366, "height": 768},
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            )
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+            locale="en-IN",
+            timezone_id="Asia/Kolkata",
         )
+        context.add_cookies(NAUKRI_COOKIES)
         page = context.new_page()
 
         try:
-            login(page)
+            go_to_profile(page)
             update_headline(page)
+            update_about(page)
         except Exception as e:
             log(f"Unexpected error: {e}")
             page.screenshot(path="debug_screenshot.png")
@@ -148,7 +297,7 @@ def run():
         finally:
             browser.close()
 
-    log("Done. Browser closed.")
+    log("Done!")
 
 
 if __name__ == "__main__":

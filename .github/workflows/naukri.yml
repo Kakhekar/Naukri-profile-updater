@@ -26,12 +26,25 @@ jobs:
           playwright install firefox
           playwright install-deps firefox
 
-      - name: Run uploader
+      - name: Upload Resume
         env:
-          NAUK_AT: ${{ secrets.NAUK_AT }}
-          NAUK_SID: ${{ secrets.NAUK_SID }}
-          NAUK_RT: ${{ secrets.NAUK_RT }}
+          YOUR_NAME:       ${{ secrets.YOUR_NAME }}
+          RESUME_FILENAME: ${{ secrets.RESUME_FILENAME }}
+          NAUK_AT:         ${{ secrets.NAUK_AT }}
+          NAUK_SID:        ${{ secrets.NAUK_SID }}
+          NAUK_RT:         ${{ secrets.NAUK_RT }}
+          HEADLESS:        "true"
         run: python upload_resume.py
+
+      - name: Update Headline and About
+        env:
+          NAUK_AT:          ${{ secrets.NAUK_AT }}
+          NAUK_SID:         ${{ secrets.NAUK_SID }}
+          NAUK_RT:          ${{ secrets.NAUK_RT }}
+          NAUKRI_HEADLINES: ${{ secrets.NAUKRI_HEADLINES }}
+          NAUKRI_ABOUT:     ${{ secrets.NAUKRI_ABOUT }}
+          HEADLESS:         "true"
+        run: python naukri_updater.py
 
       - name: Upload debug screenshots
         if: always()
