@@ -10,7 +10,7 @@ Runs twice daily via GitHub Actions (7:30 AM and 1:30 PM IST), or locally on dem
 
 The scripts use Playwright to drive a Firefox browser session authenticated via Naukri session cookies (no username/password login). Each run:
 
-1. **Uploads your resume** with a date-stamped filename (`upload_resume.py`)
+1. **Uploads your resume** with a date-stamped filename (`resume.py`)
 2. **Updates your Resume Headline** with a rotating daily headline (`naukri_updater.py`)
 3. **Updates your Profile Summary / About** with a rotating daily blurb (`naukri_updater.py`)
 
@@ -46,8 +46,14 @@ The scripts authenticate via three cookies rather than a username/password login
 To obtain them:
 
 1. Log into [naukri.com](https://www.naukri.com) in your browser.
-2. Open DevTools → Application → Cookies → `https://www.naukri.com`.
-3. Copy the values of `nauk_at`, `nauk_sid`, and `nauk_rt`.
+2. Open cosole and run
+```bash
+const cookies = ['nauk_at', 'nauk_sid', 'nauk_rt'];
+cookies.forEach(name => {
+    const value = document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1];
+    console.log(`${name}=${value}`);
+});
+```
 
 These expire periodically — refresh them in your `.env` / GitHub Secrets whenever the script starts failing.
 
@@ -130,7 +136,7 @@ On each run the workflow uploads debug screenshots as a build artifact so you ca
 | File | Purpose |
 |---|---|
 | `naukri_updater.py` | Updates Resume Headline and Profile Summary via session cookies |
-| `upload_resume.py` | Uploads a date-stamped copy of your resume |
+| `resume.py` | Uploads a date-stamped copy of your resume |
 | `config.py` | Credential and headline parsing helpers (used by legacy flows) |
 | `scheduler.py` | Runs the updater repeatedly on a configurable interval |
 | `requirements.txt` | Python dependencies |
