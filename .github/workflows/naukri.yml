@@ -15,16 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout resume from private repo
-        uses: actions/checkout@v4
-        with:
-          repository: Kakhekar/my-resume
-          token: ${{ secrets.RESUME_PAT }}
-          path: resume-repo
-
-      - name: Copy resume to workspace
-        run: cp resume-repo/shubham_kakhekar.pdf resume.pdf
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
