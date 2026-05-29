@@ -60,7 +60,7 @@ HEADLINE = HEADLINES[index]
 HEADLESS = os.environ.get("NAUKRI_HEADLESS", "False").strip().lower() in ("1", "true", "yes")
 
 # Optional resume path for upload scripts.
-RESUME_PATH = os.environ.get("NAUKRI_RESUME_PATH", "Shubham_Kakhekar.pdf")
+RESUME_PATH = os.environ.get("NAUKRI_RESUME_PATH", "resume.pdf")
 
 if not EMAIL or not PASSWORD:
     raise ValueError(

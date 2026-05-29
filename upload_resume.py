@@ -13,7 +13,7 @@ import time
 import sys
 
 # ── Config ──────────────────────────────────────────────────
-ORIGINAL_RESUME = os.environ.get("NAUKRI_ORIGINAL_RESUME", "Shubham_Kakhekar.pdf")
+ORIGINAL_RESUME = os.environ.get("NAUKRI_ORIGINAL_RESUME", "resume.pdf")
 HEADLESS = os.environ.get("NAUKRI_HEADLESS", "True").strip().lower() in ("1", "true", "yes")
 
 NAUKRI_COOKIES = [
@@ -54,9 +54,10 @@ def rename_resume(original_path):
         log(f"ERROR: '{original_path}' not found.")
         sys.exit(1)
 
+    your_name = os.environ.get("YOUR_NAME", "resume").strip().lower().replace(" ", "_")
     ext = os.path.splitext(original_path)[1]
     today = datetime.today().strftime("%d_%m_%Y")
-    new_name = f"shubham_kakhekar_{today}{ext}"
+    new_name = f"{your_name}_{today}{ext}"
     new_path = os.path.join(os.path.dirname(os.path.abspath(original_path)), new_name)
 
     shutil.copy2(original_path, new_path)

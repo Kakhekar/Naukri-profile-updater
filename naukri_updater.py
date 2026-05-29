@@ -64,8 +64,8 @@ def log(msg):
 
 def go_to_profile(page):
     log("Going to profile page...")
-    page.goto("https://www.naukri.com/mnjuser/profile", wait_until="domcontentloaded")
-    time.sleep(2)  # reduced from 3
+    page.goto("https://www.naukri.com/mnjuser/profile", wait_until="networkidle")
+    time.sleep(3)
 
 
 def fill_input(page, text, screenshot_name, selector_hint=None):
@@ -77,13 +77,13 @@ def fill_input(page, text, screenshot_name, selector_hint=None):
         selectors.append(selector_hint)
 
     selectors += [
+        "textarea#resumeHeadline",
+        "textarea[name='resumeHeadline']",
+        "textarea[placeholder*='headline' i]",
         "textarea#profileSummary",
         "textarea[name='profileSummary']",
         "textarea[placeholder*='summary' i]",
         "textarea[placeholder*='profile' i]",
-        "textarea#resumeHeadline",
-        "textarea[name='resumeHeadline']",
-        "textarea[placeholder*='headline' i]",
         "[contenteditable='true']",
         "textarea",
     ]
@@ -107,9 +107,10 @@ def fill_input(page, text, screenshot_name, selector_hint=None):
     input_el.press("Control+a")
     input_el.press("Delete")
     time.sleep(0.5)
-    input_el.fill(text)   # ← fill() instead of type() — instant, no timeout
+    input_el.fill(text)
     time.sleep(1)
     return True
+
 
 def click_save(page, screenshot_name):
     """Try multiple Save button selectors."""
@@ -147,14 +148,11 @@ def close_success_popup(page):
         "button:has-text('OK')",
     ]:
         try:
-            if sel.startswith("//"):
-                btn = page.locator(f"xpath={sel}").first
-            else:
-                btn = page.locator(sel).first
-            btn.wait_for(state="visible", timeout=1500)  # reduced from 3000
+            btn = page.locator(sel).first
+            btn.wait_for(state="visible", timeout=1500)
             btn.click(timeout=1500)
             log(f"Closed popup with: {sel}")
-            time.sleep(0.5)  # reduced from 1
+            time.sleep(0.5)
             return True
         except Exception:
             continue
@@ -169,8 +167,10 @@ def close_success_popup(page):
 
     return False
 
+
 def update_headline(page):
     log("Looking for Resume Headline edit button...")
+    clicked = False
     for sel in [
         "xpath=//div[contains(@class,'resumeHeadline')]//span[contains(@class,'edit')]",
         "xpath=//div[contains(text(),'Resume Headline')]/..//span[contains(@class,'edit')]",
@@ -178,28 +178,33 @@ def update_headline(page):
         "div.resumeHeadline .edit",
     ]:
         try:
-            page.locator(sel).first.click(timeout=3000)
+            loc = page.locator(sel).first
+            loc.wait_for(state="visible", timeout=5000)
+            loc.scroll_into_view_if_needed()
+            loc.click(timeout=5000)
             log(f"Clicked headline edit: {sel}")
+            clicked = True
             break
         except Exception:
             continue
 
-    time.sleep(2)
+    if not clicked:
+        log("Could not find headline edit button. Saving debug_headline.png...")
+        page.screenshot(path="debug_headline.png")
+        sys.exit(1)
 
-    if not fill_input(page, HEADLINE, "debug_headline.png"):
+    time.sleep(3)
+    page.screenshot(path="debug_headline.png")  # always capture modal state
+
+    if not fill_input(page, HEADLINE, "debug_headline.png", selector_hint="textarea#resumeHeadline"):
         sys.exit(1)
 
     if not click_save(page, "debug_headline.png"):
         sys.exit(1)
 
     log(f'✅ Headline updated: "{HEADLINE}"')
-
     time.sleep(2)
-    closed = close_success_popup(page)
-    if closed:
-        log("Popup closed — moving to About update...")
-    else:
-        log("No popup found or already dismissed — continuing to About...")
+    close_success_popup(page)
     time.sleep(1)
 
 
@@ -208,10 +213,11 @@ def update_about(page):
 
     try:
         page.evaluate("window.scrollBy(0, 600)")
-        time.sleep(0.5)  # reduced from 1
+        time.sleep(0.5)
     except Exception:
         pass
 
+    clicked = False
     for sel in [
         "xpath=//div[contains(@class,'profileSummary')]//span[contains(@class,'edit')]",
         "xpath=//div[contains(@class,'profileSummary')]//span[contains(@class,'editIcon')]",
@@ -223,17 +229,27 @@ def update_about(page):
         "div.profileSummary span.edit",
     ]:
         try:
-            page.locator(sel).first.click(timeout=3000)
+            loc = page.locator(sel).first
+            loc.wait_for(state="visible", timeout=5000)
+            loc.scroll_into_view_if_needed()
+            loc.click(timeout=5000)
             log(f"Clicked profile summary edit: {sel}")
+            clicked = True
             break
         except Exception:
             continue
 
-    time.sleep(1)  # reduced from 2
+    if not clicked:
+        log("Could not find Profile Summary edit button. Saving debug_about.png...")
+        page.screenshot(path="debug_about.png")
+        return  # non-fatal — headline already updated
+
+    time.sleep(3)
+    page.screenshot(path="debug_about.png")  # always capture modal state
 
     input_el = None
     for sel in [
-        "textarea#profileSummaryTxt",  # ← exact id from your error log
+        "textarea#profileSummaryTxt",
         "textarea#profileSummary",
         "textarea[name='profileSummary']",
         "textarea[placeholder*='summary' i]",
@@ -255,19 +271,19 @@ def update_about(page):
         return
 
     input_el.click()
-    input_el.fill("")    # clear instantly
-    input_el.fill(ABOUT) # fill instantly
+    input_el.fill("")
+    input_el.fill(ABOUT)
     time.sleep(0.5)
 
     if not click_save(page, "debug_about.png"):
         log("Skipping profile summary save...")
         return
 
-    time.sleep(1)  # reduced from 2
+    time.sleep(1)
     close_success_popup(page)
-
     log(f'✅ Profile Summary updated: "{ABOUT[:60]}..."')
-        
+
+
 def run():
     missing = [c["name"] for c in NAUKRI_COOKIES if not c["value"] and c["name"] != "is_login"]
     if missing:
