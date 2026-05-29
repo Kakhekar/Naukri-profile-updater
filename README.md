@@ -5,6 +5,7 @@ Automatically logs into Naukri using session cookies and updates your **Resume H
 
 Runs twice daily via GitHub Actions (7:30 AM and 1:30 PM IST), or locally on demand.
 
+
 ---
 
 ## How it works
