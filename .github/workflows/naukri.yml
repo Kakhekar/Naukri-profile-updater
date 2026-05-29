@@ -1,4 +1,4 @@
-name: Naukri Resume Upload
+name: Naukri Auto Updater
 
 on:
   schedule:
@@ -10,10 +10,20 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  upload:
+  update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout resume from private repo
+        uses: actions/checkout@v4
+        with:
+          repository: Kakhekar/my-resume
+          token: ${{ secrets.RESUME_PAT }}
+          path: resume-repo
+
+      - name: Copy resume to workspace
+        run: cp resume-repo/shubham_kakhekar.pdf resume.pdf
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -26,25 +36,19 @@ jobs:
           playwright install firefox
           playwright install-deps firefox
 
-      - name: Upload Resume
-        env:
-          YOUR_NAME:       ${{ secrets.YOUR_NAME }}
-          RESUME_FILENAME: ${{ secrets.RESUME_FILENAME }}
-          NAUK_AT:         ${{ secrets.NAUK_AT }}
-          NAUK_SID:        ${{ secrets.NAUK_SID }}
-          NAUK_RT:         ${{ secrets.NAUK_RT }}
-          HEADLESS:        "true"
-        run: python upload_resume.py
-
-      - name: Update Headline and About
+      - name: Run Naukri Updater
         env:
           NAUK_AT:          ${{ secrets.NAUK_AT }}
           NAUK_SID:         ${{ secrets.NAUK_SID }}
           NAUK_RT:          ${{ secrets.NAUK_RT }}
           NAUKRI_HEADLINES: ${{ secrets.NAUKRI_HEADLINES }}
           NAUKRI_ABOUT:     ${{ secrets.NAUKRI_ABOUT }}
+          YOUR_NAME:        ${{ secrets.YOUR_NAME }}
+          RESUME_FILENAME:  ${{ secrets.RESUME_FILENAME }}
           HEADLESS:         "true"
-        run: python naukri_updater.py
+        run: |
+          python upload_resume.py
+          python naukri_updater.py
 
       - name: Upload debug screenshots
         if: always()

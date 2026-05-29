@@ -65,7 +65,22 @@ def log(msg):
 def go_to_profile(page):
     log("Going to profile page...")
     page.goto("https://www.naukri.com/mnjuser/profile", wait_until="networkidle")
-    time.sleep(3)
+    
+    # Wait for skeleton to disappear and real content to load
+    try:
+        page.wait_for_selector("div.resumeHeadline", timeout=15000)
+        log("Profile content loaded.")
+    except Exception:
+        log("resumeHeadline section not found — trying longer wait...")
+        time.sleep(5)
+        try:
+            page.wait_for_selector("div.resumeHeadline", timeout=10000)
+        except Exception:
+            log("Profile still not loaded. Saving screenshot...")
+            page.screenshot(path="debug_headline.png")
+            sys.exit(1)
+    
+    time.sleep(2)  # small buffer after content appears
 
 
 def fill_input(page, text, screenshot_name, selector_hint=None):
