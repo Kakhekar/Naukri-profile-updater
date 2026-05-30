@@ -1,4 +1,3 @@
-# Naukri Profile Auto-Updater by @Kakhekar
 # Naukri Profile Auto-Updater from @Kakhekar
 
 Automatically logs into Naukri using session cookies and updates your **Resume Headline**, **Profile Summary**, and **Resume file** to keep your profile active and visible to recruiters.
@@ -114,6 +113,12 @@ Change `INTERVAL_HOURS` in `scheduler.py` to adjust frequency. The scheduler run
 ## GitHub Actions (automated)
 
 The workflow at `.github/workflows/naukri.yml` runs automatically at **7:30 AM IST** and **1:30 PM IST** every day, and can also be triggered manually via `workflow_dispatch`.
+
+### Required uml file update
+uncomment these lines,(line no : 4,5,6)
+ # schedule:
+    # - cron: '0 2 * * *'    # 7:30 AM IST
+    # - cron: '0 8 * * *'    # 1:30 PM IST
 
 ### Required GitHub Secrets
 

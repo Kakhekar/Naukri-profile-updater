@@ -1,9 +1,9 @@
 name: Naukri Auto Updater
 
 on:
-  schedule:
-    - cron: '0 2 * * *'    # 7:30 AM IST
-    - cron: '0 8 * * *'    # 1:30 PM IST
+  # schedule:
+    # - cron: '0 2 * * *'    # 7:30 AM IST
+    # - cron: '0 8 * * *'    # 1:30 PM IST
   workflow_dispatch:
 
 env:
