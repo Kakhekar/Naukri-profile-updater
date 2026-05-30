@@ -1,4 +1,4 @@
-# Naukri Profile Auto-Updater from : @Kakhekar
+# Naukri Profile Auto-Updater from  @Kakhekar
 
 Automatically logs into Naukri using session cookies and updates your **Resume Headline**, **Profile Summary**, and **Resume file** to keep your profile active and visible to recruiters.
 
